@@ -1,0 +1,39 @@
+﻿@page "/login"
+@inject NavigationManager Navigation
+@using BlazorClient.Protos
+@inject Greeter.GreeterClient AuthService
+
+<h3>Logowanie</h3>
+
+<p style="color: red;" hidden="@(!_loginFailed)">Błąd logowania. Spróbuj ponownie.</p>
+
+<input @bind="Email" placeholder="Email" />
+<input type="password" @bind="Password" placeholder="Hasło" />
+<button @onclick="Login1">Zaloguj</button>
+
+@code {
+    private string Email { get; set; }
+    private string Password { get; set; }
+    private bool _loginFailed = false;
+
+    private async Task Login1()
+    {
+        try
+        {
+
+            var response = await AuthService.LoginAsync(new LoginRequest
+                {
+                    Email = Email,
+                    Password = Password
+                });
+
+            Console.WriteLine($"Token: {response.Token}");
+
+            Navigation.NavigateTo("/");
+        }
+        catch
+        {
+            _loginFailed = true;
+        }
+    }
+}

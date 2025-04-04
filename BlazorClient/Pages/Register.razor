@@ -1,0 +1,40 @@
+﻿@page "/register"
+@inject NavigationManager Navigation
+@using BlazorClient.Protos
+@inject Greeter.GreeterClient AuthService
+
+<h3>Rejestracja</h3>
+
+<p style="color: red;" hidden="@(!_registerFailed)">Błąd rejestracji. Spróbuj ponownie.</p>
+
+<input @bind="Email" placeholder="Email" />
+<input type="password" @bind="Password" placeholder="Hasło" />
+<button @onclick="Register1">Zarejestruj</button>
+
+@code {
+    private string Email { get; set; }
+    private string Password { get; set; }
+    private bool _registerFailed = false;
+
+    private async Task Register1()
+    {
+        try
+        {
+
+            var response = await AuthService.RegisterAsync(new RegisterRequest
+                {
+                    Email = Email,
+                    Password = Password
+                });
+
+            Console.WriteLine($"Token: {response.Token}");
+
+            // Po poprawnej rejestracji przekierowanie do logowania
+            Navigation.NavigateTo("/login");
+        }
+        catch
+        {
+            _registerFailed = true;
+        }
+    }
+}
