@@ -1,40 +1,82 @@
 ﻿@page "/register"
-@inject NavigationManager Navigation
 @using BlazorClient.Protos
-@inject Greeter.GreeterClient AuthService
+@using System.ComponentModel.DataAnnotations
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject AuthService.AuthServiceClient AuthServiceClient
 
 <h3>Rejestracja</h3>
 
-<p style="color: red;" hidden="@(!_registerFailed)">Błąd rejestracji. Spróbuj ponownie.</p>
+<EditForm Model="@registerModel" OnValidSubmit="HandleRegister">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
 
-<input @bind="Email" placeholder="Email" />
-<input type="password" @bind="Password" placeholder="Hasło" />
-<button @onclick="Register1">Zarejestruj</button>
+    <div class="form-group">
+        <label for="email">Email</label>
+        <InputText id="email" class="form-control" @bind-Value="registerModel.Email" />
+        <ValidationMessage For="@(() => registerModel.Email)" />
+    </div>
+
+    <div class="form-group">
+        <label for="password">Hasło</label>
+        <InputText type="password" id="password" class="form-control" @bind-Value="registerModel.Password" />
+        <ValidationMessage For="@(() => registerModel.Password)" />
+    </div>
+
+    <div class="form-group">
+        <label for="confirmPassword">Potwierdź Hasło</label>
+        <InputText type="password" id="confirmPassword" class="form-control" @bind-Value="registerModel.ConfirmPassword" />
+        <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
+    </div>
+
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Zarejestruj</button>
+    </div>
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger">
+            @errorMessage
+        </div>
+    }
+</EditForm>
+
+<p>Masz już konto? <NavLink href="/login">Zaloguj się</NavLink></p>
 
 @code {
-    private string Email { get; set; }
-    private string Password { get; set; }
-    private bool _registerFailed = false;
+    private RegisterModel registerModel = new RegisterModel();
+    private string errorMessage;
 
-    private async Task Register1()
+    public class RegisterModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+        [Required]
+        [DataType(DataType.Password)]
+        public string ConfirmPassword { get; set; } = "";
+    }
+
+    private async Task HandleRegister()
     {
         try
         {
+            var reply = await AuthServiceClient.RegisterAsync(new RegisterRequest
+            {
+                Email = registerModel.Email,
+                Password = registerModel.Password,
+                ConfirmPassword = registerModel.ConfirmPassword
+            });
 
-            var response = await AuthService.RegisterAsync(new RegisterRequest
-                {
-                    Email = Email,
-                    Password = Password
-                });
-
-            Console.WriteLine($"Token: {response.Token}");
-
-            // Po poprawnej rejestracji przekierowanie do logowania
             Navigation.NavigateTo("/login");
         }
-        catch
+        catch (Exception ex)
         {
-            _registerFailed = true;
+            errorMessage = "Błąd rejestracji: " + ex.Message;
         }
     }
 }

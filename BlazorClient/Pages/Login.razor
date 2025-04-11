@@ -1,39 +1,72 @@
 ﻿@page "/login"
-@inject NavigationManager Navigation
 @using BlazorClient.Protos
-@inject Greeter.GreeterClient AuthService
+@using System.ComponentModel.DataAnnotations
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject AuthService.AuthServiceClient AuthServiceClient
 
 <h3>Logowanie</h3>
 
-<p style="color: red;" hidden="@(!_loginFailed)">Błąd logowania. Spróbuj ponownie.</p>
+<EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
 
-<input @bind="Email" placeholder="Email" />
-<input type="password" @bind="Password" placeholder="Hasło" />
-<button @onclick="Login1">Zaloguj</button>
+    <div class="form-group">
+        <label for="email">Email</label>
+        <InputText id="email" class="form-control" @bind-Value="loginModel.Email" />
+        <ValidationMessage For="@(() => loginModel.Email)" />
+    </div>
+
+    <div class="form-group">
+        <label for="password">Hasło</label>
+        <InputText type="password" id="password" class="form-control" @bind-Value="loginModel.Password" />
+        <ValidationMessage For="@(() => loginModel.Password)" />
+    </div>
+
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Zaloguj</button>
+    </div>
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger">
+            @errorMessage
+        </div>
+    }
+</EditForm>
+
+<p>Nie masz konta? <NavLink href="/register">Zarejestruj się</NavLink></p>
 
 @code {
-    private string Email { get; set; }
-    private string Password { get; set; }
-    private bool _loginFailed = false;
+    private LoginModel loginModel = new LoginModel();
+    private string errorMessage;
 
-    private async Task Login1()
+    public sealed class LoginModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+    }
+
+    private async Task HandleLogin()
     {
         try
         {
+            var reply = await AuthServiceClient.LoginAsync(new LoginRequest { Email = loginModel.Email, Password = loginModel.Password });
 
-            var response = await AuthService.LoginAsync(new LoginRequest
-                {
-                    Email = Email,
-                    Password = Password
-                });
+            
+            await JS.InvokeVoidAsync("localStorage.setItem", "access_token", reply.Token);
 
-            Console.WriteLine($"Token: {response.Token}");
-
+            
             Navigation.NavigateTo("/");
         }
-        catch
+        catch (Exception ex)
         {
-            _loginFailed = true;
+            errorMessage = "Błąd logowania: " + ex.Message;
         }
     }
 }
